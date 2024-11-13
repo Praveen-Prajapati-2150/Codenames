@@ -1,9 +1,11 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Header from './_components/Header';
-import { ClerkProvider } from '@clerk/nextjs';
+// import { ClerkProvider } from '@clerk/nextjs';
 import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './_components/theme-provider';
+import { SocketProvider } from './context/SocketContext';
+import { StrictMode } from 'react';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -14,21 +16,18 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    // <ClerkProvider>
+    <SocketProvider>
       <html lang="en">
-        <body className={`${inter.className} bg-white h-screen`}>
-          <Header />
-          {/* <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          > */}
-          {children}
-          {/* </ThemeProvider> */}
-          <Toaster />
-        </body>
+        <StrictMode>
+          <body className={`${inter.className} bg-white`}>
+            {/* <Header /> */}
+            {children}
+            <Toaster />
+          </body>
+        </StrictMode>
       </html>
-    </ClerkProvider>
+    </SocketProvider>
+    // </ClerkProvider>
   );
 }

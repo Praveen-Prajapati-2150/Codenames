@@ -17,7 +17,7 @@ import { useUser } from '@clerk/nextjs';
 import { db } from '../../configs';
 import { and, eq } from 'drizzle-orm';
 import { toast } from 'sonner';
-import { JsonForms } from '../../configs/schema';
+import { JsonForms, userResponses } from '../../configs/schema';
 import { RWebShare } from 'react-web-share';
 
 const FormListItem = ({ jsonForm, formRecord, refreshData }) => {
@@ -26,19 +26,42 @@ const FormListItem = ({ jsonForm, formRecord, refreshData }) => {
   const { user } = useUser();
 
   const onDeleteForm = async () => {
-    const result = await db
-      .delete(JsonForms)
-      .where(
-        and(
-          eq(JsonForms.id, formRecord?.id),
-          eq(JsonForms.createdBy, user?.primaryEmailAddress?.emailAddress)
-        )
-      );
+    if (!formRecord?.id) {
+      toast('Form not found');
+      return;
+    }
 
-    if (result) {
-      toast('Form Deleted Successfully');
-      refreshData();
-    } else {
+    if (!user?.primaryEmailAddress?.emailAddress) {
+      toast('User not authenticated');
+      return;
+    }
+
+    try {
+      await db
+        .delete(userResponses)
+        .where(eq(userResponses.formRef, formRecord?.id));
+
+      const result = await db
+        .delete(JsonForms)
+        // .set({ deleted: true }) // Mark the form as deleted
+        .where(
+          and(
+            eq(JsonForms.id, formRecord?.id),
+            eq(JsonForms.createdBy, user?.primaryEmailAddress?.emailAddress)
+          )
+        );
+
+      console.log(result);
+
+      if (result.rowCount > 0) {
+        // Assuming Drizzle ORM returns the number of affected rows
+        toast('Form Deleted Successfully');
+        refreshData();
+      } else {
+        toast('Error Deleting Form: Form not found or not authorized');
+      }
+    } catch (error) {
+      console.error('Error deleting form:', error);
       toast('Error Deleting Form');
     }
   };

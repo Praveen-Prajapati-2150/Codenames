@@ -4,6 +4,7 @@ import DashboardLayout from './layout';
 import { Button } from '../components/ui/button';
 import CreateForm from './_components/CreateForm';
 import FormList from './_components/FormList';
+import { Skeleton } from '../components/ui/skeleton';
 
 const Dashboard = () => {
   return (

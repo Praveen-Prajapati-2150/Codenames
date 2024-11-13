@@ -35,7 +35,6 @@ const CreateForm = () => {
   `;
 
   const onCreateForm = async () => {
-    // console.log(userInput)
     // setOpenDialog(false)
 
     setLoading(true);
@@ -44,8 +43,6 @@ const CreateForm = () => {
     );
 
     const uniqueId = generateUniqueId();
-
-    // console.log(result.response.text());
 
     if (result.response.text()) {
       const resp = await db

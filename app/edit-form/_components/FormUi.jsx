@@ -20,6 +20,7 @@ import { db } from '../../configs/index';
 import { toast } from 'sonner';
 import { SignInButton, useUser } from '@clerk/nextjs';
 import { Button } from '../../components/ui/button';
+import { Skeleton } from '../../components/ui/skeleton';
 
 const renderField = (
   field,
@@ -189,72 +190,98 @@ const FormUi = ({
       className="border p-5 md:w-[600px] rounded-lg"
       data-theme={selectedTheme}
     >
-      <h2 className="font-bold text-center text-2xl">{jsonForm?.form_title}</h2>
+      <h2 className="font-bold text-center text-2xl">
+        {jsonForm?.form_title ? (
+          jsonForm?.form_title
+        ) : (
+          <div className="flex items-center justify-center w-full">
+            <Skeleton className="w-[60%] h-[40px] rounded-lg " />
+          </div>
+        )}
+      </h2>
       <h2 className="text-sm text-gray-400 text-center">
-        {jsonForm?.form_subheading}
+        {jsonForm?.form_subheading ? (
+          jsonForm?.form_subheading
+        ) : (
+          <Skeleton className="w-full mt-2 mb-4 h-[20px] rounded-lg" />
+        )}
       </h2>
 
-      {jsonForm?.form_fields?.map((field, index) => {
-        return (
-          <div key={index} className="my-3 flex gap-2">
-            <div className="w-full">
-              {field.field_type === 'checkbox' && !field.field_options ? (
-                <>
-                  <div key={index} className="flex items-center gap-2">
-                    <Checkbox
-                      // onCheckedChange={(checked) =>
-                      //   handleCheckboxChange(
-                      // checked,
-                      // option.value,
-                      // field.field_label
-                      //   )
-                      // }
-                      // checked={field.value}
-                      onCheckedChange={(checked) =>
-                        // handleCheckboxChange(
-                        //   checked,
-                        //   option.value,
-                        //   field.field_label
-                        // )
-                        handleInputChange(checked, field.field_label)
-                      }
-                      name={field.field_name}
-                      id={field.field_name}
-                    />
-                    <Label
-                      className="text-xs text-gray-500"
-                      htmlFor={field.field_name}
-                    >
-                      {field.field_label}
-                    </Label>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <Label className="text-xs text-gray-500">
-                    {field.field_label}
-                  </Label>
-                  {renderField(
-                    field,
-                    handleInputChange,
-                    formData,
-                    handleCheckboxChange
-                  )}
-                </>
-              )}
-            </div>
-            {!path.includes('aiform') && (
-              <FieldEdit
-                defaultValue={field}
-                onUpdate={(value) => onFieldUpdate(value, index)}
-                deleteField={() => deleteField(index)}
+      {/* {jsonForm?.form_fields.length > 0 */}
+      {!jsonForm?.form_fields
+        ? Array.from({ length: 6 }).map((_, index) => (
+            <div className="flex flex-col">
+              <Skeleton
+                key={index}
+                className=" w-[100px] h-[15px] rounded-lg"
               />
-            )}
-          </div>
-        );
-      })}
+              <Skeleton
+                key={index}
+                className="mt-1 mb-4 w-full h-[38px] rounded-lg"
+              />
+            </div>
+          ))
+        : jsonForm?.form_fields?.map((field, index) => {
+            return (
+              <div key={index} className="my-3 flex gap-2">
+                <div className="w-full">
+                  {field.field_type === 'checkbox' && !field.field_options ? (
+                    <>
+                      <div key={index} className="flex items-center gap-2">
+                        <Checkbox
+                          // onCheckedChange={(checked) =>
+                          //   handleCheckboxChange(
+                          // checked,
+                          // option.value,
+                          // field.field_label
+                          //   )
+                          // }
+                          // checked={field.value}
+                          onCheckedChange={(checked) =>
+                            // handleCheckboxChange(
+                            //   checked,
+                            //   option.value,
+                            //   field.field_label
+                            // )
+                            handleInputChange(checked, field.field_label)
+                          }
+                          name={field.field_name}
+                          id={field.field_name}
+                        />
+                        <Label
+                          className="text-xs text-gray-500"
+                          htmlFor={field.field_name}
+                        >
+                          {field.field_label}
+                        </Label>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Label className="text-xs text-gray-500">
+                        {field.field_label}
+                      </Label>
+                      {renderField(
+                        field,
+                        handleInputChange,
+                        formData,
+                        handleCheckboxChange
+                      )}
+                    </>
+                  )}
+                </div>
+                {!path.includes('aiform') && (
+                  <FieldEdit
+                    defaultValue={field}
+                    onUpdate={(value) => onFieldUpdate(value, index)}
+                    deleteField={() => deleteField(index)}
+                  />
+                )}
+              </div>
+            );
+          })}
 
-      {!enableSignIn ? (
+      {/* {!enableSignIn ? (
         <button type="submit" className="btn btn-primary">
           Submit
         </button>
@@ -266,7 +293,7 @@ const FormUi = ({
         <Button>
           <SignInButton mode="modal">Sign In Before Submit</SignInButton>
         </Button>
-      )}
+      )} */}
     </form>
   );
 };

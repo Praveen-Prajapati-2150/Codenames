@@ -38,7 +38,6 @@ const SideNav = () => {
   ];
 
   const path = usePathname();
-
   const { user } = useUser();
   const [formList, setFormList] = useState([]);
 
@@ -78,7 +77,7 @@ const SideNav = () => {
       <div className="fixed bottom-7 p-6 w-64">
         <Button className="w-full">+ Create Form</Button>
         <div className="my-7">
-          <Progress value={Math.round(formList?.length / 3) * 100} />
+          <Progress value={(formList?.length / 3) * 100} />
           <h1 className="text-sm mt-2 text-gray-600">
             <strong>{formList?.length}</strong> out of <strong>3</strong> File
             Created

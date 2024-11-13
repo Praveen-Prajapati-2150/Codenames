@@ -1,9 +1,9 @@
 'use client';
 import { useUser } from '@clerk/nextjs';
 import { and, eq } from 'drizzle-orm';
-import { ArrowLeft, Share2, SquareArrowOutUpRight } from 'lucide-react';
+import { ArrowLeft, Code, Share2, SquareArrowOutUpRight } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -12,6 +12,18 @@ import { JsonForms } from '../../configs/schema';
 import Controller from '../_components/Controller';
 import FormUi from '../_components/FormUi';
 import { RWebShare } from 'react-web-share';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '../../components/ui/alert-dialog';
+import { Textarea } from '../../components/ui/textarea';
 
 const EditForm = ({ params }) => {
   const router = useRouter();
@@ -22,6 +34,18 @@ const EditForm = ({ params }) => {
   const [record, setRecord] = useState([]);
   const [selectedTheme, setSelectedTheme] = useState();
   const [formBackground, setFormBackground] = useState('#fff');
+  const [copyText, setCopyText] = useState('');
+
+  const currentPage = usePathname();
+  console.log({ currentPage });
+
+  useEffect(() => {
+    let timeout = setTimeout(() => {
+      setCopyText('');
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [copyText]);
 
   const onFieldUpdate = (value, index) => {
     jsonForm.form_fields[index].label = value.label;
@@ -92,7 +116,6 @@ const EditForm = ({ params }) => {
   };
 
   const updateControllerFields = async (value, columnName) => {
-    // console.log(value, columnName);
     const result = await db
       .update(JsonForms)
       .set({ [columnName]: value })
@@ -107,7 +130,12 @@ const EditForm = ({ params }) => {
     toast('Updated!!!!!');
   };
 
-  console.log(JsonForms.id, JsonForms.createdBy);
+  console.log(JsonForms.id, JsonForms.createdBy, location.path);
+
+  const embedCode = `<iframe src="http://localhost:3000/aiform/${params?.formId}"  width="100%"
+        height="850" ></iframe>`;
+
+  // console.log(embedCode);
 
   return (
     <div className="p-10 bg-white">
@@ -124,6 +152,37 @@ const EditForm = ({ params }) => {
               <SquareArrowOutUpRight className="h-5 w-5" /> Live Preview
             </Button>
           </Link>
+          <AlertDialog className="w-full">
+            <AlertDialogTrigger asChild>
+              <Button className="flex items-center gap-2 bg-gray-500 hover:bg-gray-600">
+                <Code className="h-5 w-5" /> Embed Code
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Generated Embed Code</AlertDialogTitle>
+                <AlertDialogDescription>Embed Code:</AlertDialogDescription>
+              </AlertDialogHeader>
+
+              <Textarea className="w-auto" value={embedCode} />
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText(embedCode);
+                  // alert('Embed code copied to clipboard!');
+                  setCopyText('Embed code copied to clipboard!');
+                }}
+              >
+                Copy to Clipboard
+              </Button>
+              <p className="text-green-400 text-center pt-1">{copyText}</p>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                {/* <AlertDialogAction>Continue</AlertDialogAction> */}
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <RWebShare
             data={{
               text: jsonForm.form_subheading,
@@ -139,6 +198,7 @@ const EditForm = ({ params }) => {
           </RWebShare>
         </div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <div className="p-5 border rounded-lg shadow-md">
           <Controller
@@ -146,12 +206,16 @@ const EditForm = ({ params }) => {
             handleSelectedTheme={handleSelectedTheme}
             selectedTheme={selectedTheme}
             formBackground={formBackground}
-            handleSignInEnable={(value) => updateControllerFields(value, 'enableSignIn')}
+            handleSignInEnable={(value) =>
+              updateControllerFields(value, 'enableSignIn')
+            }
           />
         </div>
         <div
           className="md:col-span-2 overflow-auto border rounded-lg 
-                     p-5 h-screen shadow-md flex items-start justify-center"
+                     p-5 h-screen shadow-md flex items-start justify-center
+                      hide-scrollbar
+                     "
           style={{ background: formBackground }}
         >
           <FormUi
