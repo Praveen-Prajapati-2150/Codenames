@@ -18,23 +18,50 @@ import { useSocket } from '../context/SocketContext';
 import wordList from '../_data/Words';
 
 const CardGrid = forwardRef((props, ref) => {
-  const { gameStarted, roomId, user, nickName } = props;
+  const {
+    gameStarted,
+    roomId,
+    user,
+    nickName,
+    activeTeam,
+    handleActiveTeam,
+    handleCardRemaining,
+    redSpyMaster,
+    blueSpyMaster,
+  } = props;
 
   const socket = useSocket();
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '∞']);
   const [selectedOption, setSelectedOption] = useState(null);
   const [clue, setClue] = useState(false);
-  const [clueText, setClueText] = useState('');
-  const [clueOption, setClueOption] = useState(0);
+  const [clueText, setClueText] = useState(null);
+  const [clueOption, setClueOption] = useState(null);
   const [showClue, setShowClue] = useState(false);
+  const [spymasterinlistornot, setSpymasterinlistornot] = useState(false);
 
   // const [words, setWords] = useState([]);
   const [words, setWords] = useState([]);
   const hasInitialized = useRef(false);
   const [openedCards, setOpenedCards] = useState(
-    new Array(words.length).fill(false)
+    new Array(words?.length).fill(false)
   );
+
+  // console.log({ activeTeam });
+
+  useEffect(() => {
+    const checkSpymasterInsideTheRoomOrNot = () => {
+      let result1 = redSpyMaster?.find((item) => item === user.nickName);
+      if (result1) return result1;
+
+      let result2 = blueSpyMaster?.find((item) => item === user.nickName);
+      if (result2) return result2;
+    };
+
+    if (user?.nickName) {
+      setSpymasterinlistornot(checkSpymasterInsideTheRoomOrNot());
+    }
+  }, [roomId, redSpyMaster, blueSpyMaster, user]);
 
   const handleOption = (option) => {
     setSelectedOption(option);
@@ -43,7 +70,7 @@ const CardGrid = forwardRef((props, ref) => {
   };
 
   const handleClue = () => {
-    console.log({ clueText });
+    // console.log({ clueText });
     if (!clueText || clueOption == 0) {
       alert('Please provide clue and option');
     } else if (clueText) {
@@ -70,18 +97,62 @@ const CardGrid = forwardRef((props, ref) => {
     }
   };
 
+  const handleRevealedCardColor = (cardType) => {
+    switch (cardType) {
+      case 'blue':
+        return `-${0 * 86.49}px`;
+        break;
+      case 'grey':
+        return `-${1 * 86.49}px`;
+        break;
+      case 'red':
+        return `-${3 * 86.49}px`;
+        break;
+      // case 'black':
+      //   return `-${0 * 86.49}px`;
+      //   break;
+      default:
+        break;
+    }
+  };
+
+  const handleCardRevealed = (cardId) => {
+    const updatedWords = words.map((item) => {
+      if (item.id === cardId) {
+        return {
+          ...item,
+          isRevealed: true,
+        };
+      }
+      return item;
+    });
+
+    // console.log('handleCardRevealed', updatedWords);
+
+    setWords(updatedWords);
+
+    socket.emit('initialize-word-list', {
+      roomId,
+      wordList: updatedWords,
+    });
+  };
+
   const handleCheckCardClue = (item) => {
-    console.log(item);
-    console.log('user', user);
+    // console.log(item);
+    // console.log('user', user);
     if (user.team === item.cardType) {
-      console.log(clueOption + 1 === 0);
       if (clueOption === 0) {
         setClue(false);
         setClueText('');
         setShowClue(false);
         setClueOption(0);
 
+        //TODO: to update the card if the right card opens
+        handleCardRevealed(item.id);
+        handleCardRemaining(user.team);
+
         //TODO: write the code to change the turn to opposite team
+        handleActiveTeam({ team: user.team });
       } else {
         if (clueOption === 1) {
           setClueOption(0);
@@ -90,6 +161,8 @@ const CardGrid = forwardRef((props, ref) => {
         }
 
         //TODO: to update the card if the right card opens
+        handleCardRevealed(item.id);
+        handleCardRemaining(user.team);
         console.log('Card Matched');
       }
     } else {
@@ -98,12 +171,18 @@ const CardGrid = forwardRef((props, ref) => {
       setShowClue(false);
       setClueOption(0);
 
+      //TODO: to update the card if the right card opens
+      handleCardRevealed(item.id);
+      handleCardRemaining(user.team);
+
       //TODO: write the code to change the turn to opposite team
+      handleActiveTeam({ team: user.team });
       console.log('Card not matched');
     }
   };
 
   const handleCardClick = (index) => {
+    // console.log({ index });
     setOpenedCards((prevState) => {
       const newOpenedCards = [...prevState];
       newOpenedCards[index] = !newOpenedCards[index];
@@ -112,27 +191,34 @@ const CardGrid = forwardRef((props, ref) => {
   };
 
   const handleSelectors = (cardId) => {
-    if (clue && clueText) {
-      const updatedWords = words.map((item) => {
-        if (item.id === cardId) {
-          return {
-            ...item,
-            selectors: item.selectors.includes(nickName)
-              ? item.selectors.filter((name) => name !== nickName)
-              : [...item.selectors, nickName],
-          };
-        }
-        return item;
-      });
+    if (user?.type === 'operative' && user?.team === activeTeam)
+      if (clue && clueText) {
+        const updatedWords = words.map((item) => {
+          if (item.id === cardId) {
+            return {
+              ...item,
+              selectors: item.selectors.includes(nickName)
+                ? item.selectors.filter((name) => name !== nickName)
+                : [...item.selectors, nickName],
+            };
+          }
+          return item;
+        });
 
-      setWords(updatedWords);
+        setWords(updatedWords);
 
-      socket.emit('update-word-state', { roomId, cardId, nickName });
-    }
+        socket.emit('update-word-state', {
+          roomId,
+          cardId,
+          nickName,
+          updatedWords,
+        });
+      }
   };
 
   useEffect(() => {
     if (clue && clueText && clueOption) {
+      console.log(1);
       socket.emit('initialize-clue-name', {
         roomId,
         clueText,
@@ -140,13 +226,22 @@ const CardGrid = forwardRef((props, ref) => {
       });
     }
 
-    const handleInitialClueState = (data) => {
-      console.log(data);
+    if (!clue && !clueText && !clueOption) {
+      console.log(2);
+      socket.emit('get-clue-word', {
+        roomId,
+      });
+    }
 
-      setClueText(data.clueText);
-      setClueOption(data.clueOption);
-      setShowClue(true);
-      setClue(true);
+    const handleInitialClueState = (data) => {
+      console.log('server clue data', data);
+
+      if (data.clueText && data.clueOption) {
+        setClueText(data.clueText);
+        setClueOption(data.clueOption);
+        setShowClue(true);
+        setClue(true);
+      }
     };
 
     socket.on('initial-clue-word', handleInitialClueState);
@@ -156,7 +251,7 @@ const CardGrid = forwardRef((props, ref) => {
     };
   }, [clue, clueOption]);
 
-  console.log({ showClue });
+  // console.log({ showClue });
 
   useEffect(() => {
     if (!socket || !roomId || !nickName) return;
@@ -165,7 +260,7 @@ const CardGrid = forwardRef((props, ref) => {
       fetchWords(roomId)
         .then((roomData) => {
           const initialWords = roomData.wordList;
-          console.log('initialWords', initialWords);
+          // console.log('initialWords', initialWords);
           socket.emit('initialize-word-list', {
             roomId,
             wordList: initialWords,
@@ -179,24 +274,32 @@ const CardGrid = forwardRef((props, ref) => {
 
     fetchWords_();
 
+    const updateDBWordList = async ({ wordList }) => {
+      await db
+        .update(RoomWordList)
+        .set({ wordList: wordList })
+        .where(eq(RoomWordList.roomId, roomId));
+
+      return { success: true, message: 'Word revealed successfully' };
+    };
+
     const handleInitialWordState = ({ wordList }) => {
-      console.log(wordList);
+      // console.log('handleInitialWordState', wordList);
+      setWords(wordList);
+      updateDBWordList({ wordList });
     };
 
     const handleUpdateWordState = ({ wordList }) => {
-      // console.log('boomer');
       setWords(wordList);
-      console.log('update list', wordList);
+      // console.log('update list', wordList);
     };
 
     socket.on('initial-word-list', handleInitialWordState);
     socket.on('update-word-list', handleUpdateWordState);
-    // socket.on('new-user', handleNewUser);
 
     return () => {
       socket.off('initial-word-list', handleInitialWordState);
       socket.off('update-word-list', handleUpdateWordState);
-      // socket.off('new-user', handleNewUser);
     };
   }, [socket, roomId, nickName]);
 
@@ -207,9 +310,8 @@ const CardGrid = forwardRef((props, ref) => {
           <Card
             key={index}
             className="relative w-[134.05px] h-[86.49px] aspect-[4/3] overflow-hidden"
-            // onClick={() => handleCardClick(index)}
           >
-            {user.type === 'spymaster' ? (
+            {user?.type === 'spymaster' && spymasterinlistornot ? (
               <div
                 className="w-full h-[86.49px] bg-no-repeat bg-cover z-0"
                 style={{
@@ -222,7 +324,9 @@ const CardGrid = forwardRef((props, ref) => {
                 className="w-full h-[86.49px] bg-no-repeat bg-cover z-0"
                 style={{
                   backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/fronts.png')`,
-                  backgroundPositionY: `-${2 * 86.49}px`,
+                  backgroundPositionY: item.isRevealed
+                    ? `${handleCardColor(item.cardType)}`
+                    : `-${2 * 86.49}px`,
                 }}
               ></div>
             )}
@@ -236,89 +340,115 @@ const CardGrid = forwardRef((props, ref) => {
               </p>
             </CardContent>
 
-            {/* Cover Layer */}
-            {/* <div
-              className={`absolute inset-0 w-full h-full bg-cover transition-all duration-500 cursor-pointer z-20 ${
-                openedCards[index] ? 'opacity-0' : 'opacity-100'
-              }`}
-              style={{
-                // backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/backs.png')`,
-                // backgroundPositionY: `-${3 * 86.49}px`,
-                backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/backs.png')`,
-                backgroundPositionY: `-${0 * 86.49}px`,
-              }}
-            ></div> */}
-
-            {/* Cover Layer */}
-            {/* <div className="w-full flex items-center justify-center">
+            {item.isRevealed && (
               <div
-                className={`absolute left-1/2 top-1/2
-                inset-0 
-                w-[85px]
-                h-[77px]
-                bg-cover transition-all duration-500 cursor-pointer z-40
-                text-center flex items-center justify-center        
-                mt-1    
-                ${openedCards[index] ? 'opacity-0' : 'opacity-100'}
-                `}
-                style={{
-                  transform: 'translate(-50%, -50%)',
-                  // backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/red.png')`,
-                  backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/blue.png')`,
-                  backgroundPositionY: `-${2 * 76.9}px`,
-                }}
-              ></div>
-            </div> */}
+                className={`z-50 
+                  `}
+                // ${
+                //   openedCards[index] ? 'h-[35px]' : 'h-[85px]'
+                // }
+                onClick={() => handleCardClick(index)}
+              >
+                {/* Cover Layer background */}
+                <div
+                  className={`absolute inset-0 w-full bg-cover transition-all duration-500 cursor-pointer z-20 
+                    ${openedCards[index] ? 'h-[46px]' : 'h-[85px]'}
+                    `}
+                  // ${openedCards[index] ? 'opacity-0' : 'opacity-100'}
+                  style={{
+                    // width: '120%',
+                    // clipPath: `polygon(0% 0, 100% 0, 130% 59%, -30% 59%)`,
+                    backgroundImage:
+                      item.cardType !== 'black'
+                        ? `url('https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/backs.png')`
+                        : null,
+                    backgroundPositionY: `${handleRevealedCardColor(
+                      item.cardType
+                    )}`,
+                  }}
+                ></div>
 
-            <div className="w-full flex items-center justify-center">
-              <div
-                onClick={() => handleSelectors(item.id)}
-                className={`absolute pt-2 pl-2 pb-2 pr-4 
-                flex flex-wrap 
-                inset-0 
-                w-full 
+                {/* Cover Layer Illustration */}
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    className={`absolute left-1/2 top-1/2 inset-0 w-[85px] h-[77px]
+                    bg-cover transition-all duration-500 cursor-pointer z-40 text-center flex items-center justify-center mt-1    
+                    ${openedCards[index] ? 'opacity-0' : 'opacity-100'}
+                    `}
+                    style={{
+                      transform: 'translate(-50%, -50%)',
+                      backgroundImage: `url( ${
+                        item.cardType === 'red'
+                          ? 'https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/red.png'
+                          : item.cardType === 'blue'
+                          ? 'https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/blue.png'
+                          : item.cardType === 'grey'
+                          ? 'https://cdn2.codenames.game/cno/2023-12-19/theme/classic/card/gray.png'
+                          : null
+                      })`,
+                      backgroundPositionY: `-${
+                        Math.floor(
+                          Math.random() * (item.cardType === 'grey' ? 6 : 8)
+                        ) * 77
+                      }px`,
+                    }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {!item.isRevealed && (
+              <div className="w-full flex items-center justify-center">
+                <div
+                  onClick={() => handleSelectors(item.id)}
+                  className={`absolute pt-2 pl-2 pb-2 pr-4  flex flex-wrap inset-0  w-full 
                 bg-cover transition-all duration-500 cursor-pointer z-50 
                 ${openedCards[index] ? 'opacity-0' : 'opacity-100'} 
                 `}
-              >
-                {item.selectors?.map((item, index) => {
-                  return (
-                    <p
-                      key={index}
-                      className="bg-yellow-500 text-white text-[13px] p-1 h-5 
+                >
+                  {item.selectors?.map((item, index) => {
+                    return (
+                      <p
+                        key={index}
+                        className="bg-yellow-500 text-white text-[13px] p-1 h-5 
                       flex items-center text-center mr-[0.8px] rounded-sm"
-                    >
-                      {item}
-                    </p>
-                  );
-                })}
-              </div>
-            </div>
-
-            {clue && user.type === 'operative' && (
-              <div className="w-full flex items-center justify-center">
-                <div
-                  onClick={() => handleCheckCardClue(item)}
-                  className={`absolute left-1/2 top-1/2 inset-0 w-[30px] h-[30px] bg-cover transition-all duration-500 cursor-pointer z-50
-                              text-center flex items-center justify-center mt-1`}
-                  style={{
-                    transform: 'translate(125%, -155%)',
-                    backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/img/icon/icon_tap_card.png')`,
-                  }}
-                ></div>
+                      >
+                        {item}
+                      </p>
+                    );
+                  })}
+                </div>
               </div>
             )}
+
+            {clue &&
+              user?.type === 'operative' &&
+              user?.team === activeTeam &&
+              !item.isRevealed && (
+                <div className="w-full flex items-center justify-center">
+                  <div
+                    onClick={() => handleCheckCardClue(item)}
+                    className={`absolute left-1/2 top-1/2 inset-0 w-[30px] h-[30px] bg-cover transition-all duration-500 cursor-pointer z-50
+                              text-center flex items-center justify-center mt-1`}
+                    style={{
+                      transform: 'translate(125%, -155%)',
+                      backgroundImage: `url('https://cdn2.codenames.game/cno/2023-12-19/img/icon/icon_tap_card.png')`,
+                    }}
+                  ></div>
+                </div>
+              )}
           </Card>
         ))}
       </div>
 
       <div className="w-full pt-10 flex items-center justify-center ">
-        {user?.type === 'spymaster' && !clue && (
+        {user?.type === 'spymaster' && user?.team === activeTeam && !clue && (
           <>
             <input
               className="bg-white outline-none px-3 mr-2 rounded-full w-auto py-2"
               type="text"
               placeholder="TYPE YOUR CLUE HERE"
+              value={clueText?.toUpperCase()}
               onChange={(e) => setClueText(e.target.value)}
             />
             <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -349,7 +479,7 @@ const CardGrid = forwardRef((props, ref) => {
         )}
         {showClue && (
           <div className="flex items-center">
-            <Button>{clueText}</Button>
+            <Button>{clueText?.toUpperCase()}</Button>
             <Button>{clueOption}</Button>
           </div>
         )}

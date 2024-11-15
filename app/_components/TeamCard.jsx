@@ -14,10 +14,16 @@ export default function TeamCard(props) {
     handleOperative,
     nickName,
     gameStarted,
+    // redTeamCard,
+    // blueTeamCard,
+    activeTeam,
+    teamCardNumber,
   } = props;
 
   const [hideOperativeButton, setHideOperativeButton] = useState(false);
   const [hideSpyMasterButton, setHideSpyMasterButton] = useState(false);
+
+  // console.log({ activeTeam });
 
   const handleButtonStatus = () => {
     let user = JSON.parse(localStorage.getItem('user'));
@@ -44,7 +50,9 @@ export default function TeamCard(props) {
 
   return (
     <Card
-      className={`w-64 text-[#d4a57f] rounded-lg overflow-hidden`}
+      className={`w-64 text-[#d4a57f] rounded-lg overflow-hidden border-2 ${
+        activeTeam === 'red' ? 'border-red-300' : 'border-blue-300	'
+      }`}
       style={{ backgroundColor: color }}
     >
       <CardContent className="p-4 space-y-3">
@@ -60,7 +68,7 @@ export default function TeamCard(props) {
             />
           </div>
           <div>
-            <p className="text-4xl font-bold">8</p>
+            <p className="text-4xl font-bold">{teamCardNumber}</p>
           </div>
         </div>
         <div className="space-y-1">

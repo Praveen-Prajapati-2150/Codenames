@@ -13,10 +13,12 @@ export const generateRandomWords = (count = 25, containerWidth = 134.05) => {
   const shuffledWords = wordList.sort(() => 0.5 - Math.random());
   const randomWords = shuffledWords.slice(0, count);
 
+  let blueCount = Math.round(Math.random() * (9 - 8) + 8);
+
   // Create array of card types
   const cardTypes = [
-    ...Array(9).fill(CardType.BLUE), // 9 blue cards
-    ...Array(8).fill(CardType.RED), // 8 red cards
+    ...Array(blueCount).fill(CardType.BLUE), // 9 or 8 blue cards
+    ...Array(blueCount === 8 ? 9 : 8).fill(CardType.RED), // 8 or 9 red cards
     CardType.BLACK, // 1 black card
     ...Array(7).fill(CardType.GREY), // 7 grey cards
   ];
@@ -54,7 +56,10 @@ export const generateRandomWords = (count = 25, containerWidth = 134.05) => {
   };
 
   // Return words with dynamically adjusted font sizes
-  return randomWords.map((word, index) => ({
+
+  // console.log({ blueCount });
+
+  let words = randomWords.map((word, index) => ({
     id: index,
     word,
     fontSize: `${adjustFontSize(word)}rem`,
@@ -68,4 +73,6 @@ export const generateRandomWords = (count = 25, containerWidth = 134.05) => {
     selectors: [],
     isRevealed: false,
   }));
+
+  return { words, blueCount };
 };

@@ -5,10 +5,8 @@ import { Server } from 'socket.io';
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = 3000;
-// when using middleware `hostname` and `port` must be provided below
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
-// import RoomManager from './RoomManager';
 
 app.prepare().then(() => {
   const httpServer = createServer(handler);
@@ -39,21 +37,22 @@ app.prepare().then(() => {
   };
 
   const initializeWordListState = (roomId, wordList) => {
-    if (!wordListState.has(roomId)) {
-      wordListState.set(roomId, wordList);
-    }
+    // if (!wordListState.has(roomId)) {
+    //   wordListState.set(roomId, wordList);
+    // }
+    wordListState.set(roomId, wordList);
     return wordListState.get(roomId);
   };
 
-  const updateClueState = (roomId, clueText, clueOption) => {
-    clueState.set(roomId, {
-      clueText: clueText,
-      clueOption: clueOption,
-    });
+  const updateClueState = (roomId, clueText = null, clueOption = null) => {
+    if (roomId && clueText && clueOption) {
+      clueState.set(roomId, {
+        clueText: clueText,
+        clueOption: clueOption,
+      });
+    }
     return clueState.get(roomId);
   };
-
-  // console.log('roomStates', roomStates);
 
   io.on('connection', (socket) => {
     if (socket) {
@@ -96,38 +95,56 @@ app.prepare().then(() => {
       try {
         const existingWordList = initializeWordListState(roomId, wordList);
 
-        if (existingWordList === wordList) {
-          io.to(roomId).emit('initial-word-list', {
-            wordList: existingWordList,
-          });
-        }
+        // if (existingWordList === wordList) {
+        io.to(roomId).emit('initial-word-list', {
+          wordList: existingWordList,
+        });
+        // }
       } catch (error) {
         console.error('Error initialize word list:', error);
       }
     });
 
-    socket.on('update-word-state', ({ roomId, cardId, nickName }) => {
-      try {
-        const wordState = wordListState.get(roomId);
+    socket.on(
+      'update-word-state',
+      ({ roomId, cardId, nickName, updatedWords }) => {
+        try {
+          // const wordState = wordListState.get(roomId);
+          const existingWordList = initializeWordListState(
+            roomId,
+            updatedWords
+          );
 
-        if (wordState) {
-          const card = wordState.find((item) => item.id === cardId);
-          if (card) {
-            if (card.selectors.includes(nickName)) {
-              card.selectors = card.selectors.filter(
-                (name) => name !== nickName
-              );
-            } else {
-              card.selectors.push(nickName);
-            }
-
-            io.to(roomId).emit('update-word-list', { wordList: wordState });
+          if (existingWordList) {
+            io.to(roomId).emit('update-word-list', {
+              wordList: existingWordList,
+            });
           }
+        } catch (error) {
+          console.error('Error updating word state:', error);
         }
-      } catch (error) {
-        console.error('Error updating word state:', error);
+        // try {
+        //   const wordState = wordListState.get(roomId);
+
+        //   if (wordState) {
+        //     const card = wordState.find((item) => item.id === cardId);
+        //     if (card) {
+        //       if (card.selectors.includes(nickName)) {
+        //         card.selectors = card.selectors.filter(
+        //           (name) => name !== nickName
+        //         );
+        //       } else {
+        //         card.selectors.push(nickName);
+        //       }
+
+        //       io.to(roomId).emit('update-word-list', { wordList: wordState });
+        //     }
+        //   }
+        // } catch (error) {
+        //   console.error('Error updating word state:', error);
+        // }
       }
-    });
+    );
 
     socket.on(
       'initialize-clue-name',
@@ -145,7 +162,7 @@ app.prepare().then(() => {
           }
 
           const updatedClue = updateClueState(roomId, clueText, clueOption);
-          console.log('Updated clue state for room:', roomId, updatedClue);
+          console.log('Updated clue state for room 1:', roomId, updatedClue);
 
           // Emit to all clients in the room including sender
           io.to(roomId).emit('initial-clue-word', {
@@ -157,6 +174,16 @@ app.prepare().then(() => {
         }
       }
     );
+
+    socket.on('get-clue-word', ({ roomId }) => {
+      const updatedClue = updateClueState(roomId);
+      console.log('Updated clue state for room 2:', roomId, updatedClue);
+
+      io.to(roomId).emit('initial-clue-word', {
+        clueText: updatedClue?.clueText,
+        clueOption: updatedClue?.clueOption,
+      });
+    });
 
     socket.on('room-info', (data) => {
       console.log('Room info:', data);
@@ -198,20 +225,6 @@ app.prepare().then(() => {
             roomState.blueSpyMaster.push(nickName);
           }
         }
-
-        // if (team === 'red') {
-        //   if (type === 'operative') {
-        //     roomState.redTeam = [...roomState.redTeam, userInfo];
-        //   } else if (type === 'spymaster') {
-        //     roomState.redSpyMaster = [...roomState.redSpyMaster, userInfo];
-        //   }
-        // } else {
-        //   if (type === 'operative') {
-        //     roomState.blueTeam = [...roomState.blueTeam, userInfo];
-        //   } else if (type === 'spymaster') {
-        //     roomState.blueSpyMaster = [...roomState.blueSpyMaster, userInfo];
-        //   }
-        // }
 
         socket
           .to(roomId)

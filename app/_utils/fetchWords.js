@@ -4,7 +4,7 @@ import { RoomWordList } from '../configs/schema';
 import { eq } from 'drizzle-orm';
 
 const fetchWords = async (roomId) => {
-  // console.log(roomId);
+  // console.log({ roomId });
 
   try {
     const result = await db
@@ -16,11 +16,21 @@ const fetchWords = async (roomId) => {
     // console.log(result);
 
     if (result.length > 0) {
-      // return result[result.length - 1].wordList;
-      const roomData = result[result.length - 1];
-      // console.log('Fetched Room Data:', roomData);
+      // let latestRoom = [...result].sort((a, b) => b.id - a.id)[0];
 
-      return roomData;
+      // get room be the latest date of creation
+
+      // console.log(result);
+
+      let latestRoom = [...result].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )[0];
+
+      // console.log(latestRoom);
+      // console.log('Fetched Room Data:', roomData.roomId);
+
+      return latestRoom;
     } else {
       console.error('No words found for this roomId');
       return [];

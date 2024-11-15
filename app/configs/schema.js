@@ -17,10 +17,7 @@ export const RoomWordList = pgTable('create_room', {
   isGameStarted: varchar('isGameStarted').notNull(),
   roomId: text('roomId').notNull(),
   wordList: jsonb('word').notNull().default([]),
-  // wordList: jsonb('word')
-  // .notNull()
-  // .default(sql`(JSON_ARRAY())`),
-  // wordList: jsonb().notNull(), // Storing words as a JSON array
   createdBy: varchar('createdBy').notNull(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
+  teamTurn: text('teamTurn').notNull(),
 });

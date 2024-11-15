@@ -43,14 +43,76 @@ const RoomPage = ({ params }) => {
   ]);
   const [blueSpyMaster, setBlueSpyMaster] = useState([]);
 
+  const [redTeamCard, setRedTeamCard] = useState(0);
+  const [blueTeamCard, setBlueTeamCard] = useState(0);
+
   const [counter, setCounter] = useState(0);
 
   const [team, setTeam] = useState(null);
   const [role, setRole] = useState(null);
+  const [activeTeam, setActiveTeam] = useState(null);
+
+  useEffect(() => {
+    // const name = JSON.parse(localStorage.getItem('nickName'));
+    // let user = {
+    //   nickName: name,
+    //   team: null,
+    //   type: null,
+    // };
+    // window.localStorage.setItem('user', JSON.stringify(user));
+  }, [roomId]);
+
+  useEffect(() => {
+    const name = JSON.parse(localStorage.getItem('nickName'));
+    if (!name) {
+      let user = {
+        nickName: name,
+        team: null,
+        type: null,
+      };
+    }
+    window.localStorage.setItem('user', JSON.stringify(user));
+  }, [roomId]);
+
+  const handleActiveTeam = ({ team }) => {
+    if (team === 'red') {
+      setActiveTeam('blue');
+    } else {
+      setActiveTeam('red');
+    }
+  };
 
   const handleFetchWords = ({ roomId }) => {
     fetchWords(roomId)
       .then((roomData) => {
+        // let red = 0;
+        // let blue = 0;
+
+        // const initialWords = roomData.wordList;
+
+        // initialWords?.map((item) => {
+        //   if (item.cardType === 'red' && item.isRevealed !== true) {
+        //     red += 1;
+        //   }
+        //   if (item.cardType === 'blue' && item.isRevealed !== true) {
+        //     blue += 1;
+        //   }
+        // });
+
+        // setRedTeamCard(red);
+        // setBlueTeamCard(blue);
+
+        // if (red > blue) {
+        //   setActiveTeam('red');
+        // } else {
+        //   setActiveTeam('blue');
+        // }
+
+        setActiveTeam(roomData.teamTurn);
+
+        // setWords(initialWords);
+        // console.log('roomData.isGameStarted', roomData.isGameStarted);
+
         if (roomData.isGameStarted === 'started') {
           setGameStarted(roomData.isGameStarted);
         } else {
@@ -60,6 +122,14 @@ const RoomPage = ({ params }) => {
       .catch((error) => {
         console.error('Error fetching words:', error);
       });
+  };
+
+  const handleCardRemaining = (team) => {
+    if (team === 'red') {
+      setRedTeamCard((prev) => prev - 1);
+    } else if (team === 'blue') {
+      setBlueTeamCard((prev) => prev - 1);
+    }
   };
 
   useEffect(() => {
@@ -98,7 +168,7 @@ const RoomPage = ({ params }) => {
     if (!socket || !roomId || !nickName) return;
 
     // Join socket room on component mount
-    console.log(roomId, nickName);
+    // console.log(roomId, nickName);
     socket.emit('join-socket-room', { roomId, nickName });
 
     // Listen for initial room state
@@ -109,13 +179,13 @@ const RoomPage = ({ params }) => {
       blueSpyMaster,
       connectedUsers,
     }) => {
-      console.log('Received initial state:', {
-        redTeam,
-        redSpyMaster,
-        blueTeam,
-        blueSpyMaster,
-        connectedUsers,
-      });
+      // console.log('Received initial state:', {
+      //   redTeam,
+      //   redSpyMaster,
+      //   blueTeam,
+      //   blueSpyMaster,
+      //   connectedUsers,
+      // });
       setRedTeam(redTeam);
       setRedSpyMaster(redSpyMaster);
       setBlueTeam(blueTeam);
@@ -179,7 +249,7 @@ const RoomPage = ({ params }) => {
 
     // Add listener for room-info events
     const handleRoomInfo = ({ roomId, clients }) => {
-      console.log('Room info received:', { roomId, clients });
+      // console.log('Room info received:', { roomId, clients });
     };
 
     // socket.on('room-state', handleRoomState);
@@ -189,7 +259,7 @@ const RoomPage = ({ params }) => {
     socket.on('room-info', handleRoomInfo);
 
     socket.on('join-confirmed', ({ roomId }) => {
-      console.log('Join confirmed for room:', roomId);
+      // console.log('Join confirmed for room:', roomId);
     });
 
     return () => {
@@ -248,8 +318,10 @@ const RoomPage = ({ params }) => {
     }
   };
 
-  const handleCreateRoom = async (words) => {
+  const handleCreateRoom = async ({ words, blueCount }) => {
     setLoading(true);
+
+    // console.log('words', words);
 
     try {
       const resp = await db
@@ -260,17 +332,18 @@ const RoomPage = ({ params }) => {
           roomId: roomId,
           wordList: words,
           createdBy: nickName,
+          teamTurn: blueCount === 9 ? 'blue' : 'red',
         })
         .returning({ id: RoomWordList.id });
 
-      console.log('createroom resp', resp);
+      // console.log('createroom resp', resp);
 
       if (resp[0].id) {
-        console.log({ gameStarted });
+        // console.log({ gameStarted });
         setGameStarted(true);
       }
 
-      console.log('Room created with ID:', resp[0].id);
+      // console.log('Room created with ID:', resp[0].id);
     } catch (error) {
       console.error('Error creating room:', error);
     } finally {
@@ -341,6 +414,13 @@ const RoomPage = ({ params }) => {
     }
   };
 
+  const checkSpymasterInsideTheRoomOrNot = (user) => {
+    // let result;
+    // result = redSpyMaster?.find((item) => item === user.nickName);
+    // result = blueSpyMaster?.find((item) => item === user.nickName);
+    // console.log({ result });
+  };
+
   return (
     <div className="flex flex-col items-start justify-between w-full h-[100vh] ">
       {!nickName ? (
@@ -366,13 +446,18 @@ const RoomPage = ({ params }) => {
                   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDvnwFlyxtBhCjjnTQGPN1ZWOifp_ByZ6PYQ&s'
                 }
                 flex={'flex'}
-                color={'#561909'}
+                color={'#8f2b1c'}
                 players={redTeam}
                 spyMaster={redSpyMaster}
                 team={'red'}
                 handleOperative={handleOperative}
                 nickName={nickName}
                 gameStarted={gameStarted}
+                // redTeamCard={redTeamCard}
+                // blueTeamCard={blueTeamCard}
+                activeTeam={activeTeam}
+                teamCardNumber={redTeamCard}
+                handleCardRemaining={handleCardRemaining}
               />
             </div>
 
@@ -405,6 +490,11 @@ const RoomPage = ({ params }) => {
                   roomId={roomId}
                   user={user}
                   nickName={nickName}
+                  activeTeam={activeTeam}
+                  handleActiveTeam={handleActiveTeam}
+                  handleCardRemaining={handleCardRemaining}
+                  redSpyMaster={redSpyMaster}
+                  blueSpyMaster={blueSpyMaster}
                 />
               )}
             </div>
@@ -415,13 +505,18 @@ const RoomPage = ({ params }) => {
                   'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTVFfNXTksdjdov2scvVyNW0umbI8R0WSZYtA&s'
                 }
                 flex={'flex-row-reverse'}
-                color={'#103c4b'}
+                color={'#3284a3'}
                 players={blueTeam}
                 spyMaster={blueSpyMaster}
                 team={'blue'}
                 handleOperative={handleOperative}
                 nickName={nickName}
                 gameStarted={gameStarted}
+                // redTeamCard={redTeamCard}
+                // blueTeamCard={blueTeamCard}
+                activeTeam={activeTeam}
+                teamCardNumber={blueTeamCard}
+                handleCardRemaining={handleCardRemaining}
               />
             </div>
           </div>
