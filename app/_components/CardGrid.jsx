@@ -48,15 +48,22 @@ const CardGrid = forwardRef((props, ref) => {
   );
 
   // console.log({ activeTeam });
+  // console.log(spymasterinlistornot);
 
   useEffect(() => {
     const checkSpymasterInsideTheRoomOrNot = () => {
-      let result1 = redSpyMaster?.find((item) => item === user.nickName);
+      let result1 = redSpyMaster?.find((item) =>
+        item === user.nickName ? true : false
+      );
       if (result1) return result1;
 
-      let result2 = blueSpyMaster?.find((item) => item === user.nickName);
+      let result2 = blueSpyMaster?.find((item) =>
+        item === user.nickName ? true : false
+      );
       if (result2) return result2;
     };
+
+    console.log(checkSpymasterInsideTheRoomOrNot());
 
     if (user?.nickName) {
       setSpymasterinlistornot(checkSpymasterInsideTheRoomOrNot());
@@ -64,17 +71,21 @@ const CardGrid = forwardRef((props, ref) => {
   }, [roomId, redSpyMaster, blueSpyMaster, user]);
 
   const handleOption = (option) => {
-    setSelectedOption(option);
-    setIsOpen(false);
+    console.log({ option });
+
     setClueOption(option);
+    setIsOpen(false);
+    // setSelectedOption(option);
   };
 
   const handleClue = () => {
     // console.log({ clueText });
-    if (!clueText || clueOption == 0) {
-      alert('Please provide clue and option');
-    } else if (clueText) {
+    // console.log({ clueOption });
+
+    if (clueText && clueOption !== null) {
       setClue(true);
+    } else {
+      alert('Please provide clue and option');
     }
   };
 
@@ -137,6 +148,8 @@ const CardGrid = forwardRef((props, ref) => {
     });
   };
 
+  // console.log({ activeTeam });
+
   const handleCheckCardClue = (item) => {
     // console.log(item);
     // console.log('user', user);
@@ -152,7 +165,18 @@ const CardGrid = forwardRef((props, ref) => {
         handleCardRemaining(user.team);
 
         //TODO: write the code to change the turn to opposite team
-        handleActiveTeam({ team: user.team });
+        // handleActiveTeam({ team: user.team });
+        console.log('all card option has been used');
+
+        socket.emit('update-team-turn', {
+          roomId,
+          activeTeam,
+        });
+        socket.emit('get-clue-word', {
+          roomId,
+        });
+
+        //
       } else {
         if (clueOption === 1) {
           setClueOption(0);
@@ -164,6 +188,13 @@ const CardGrid = forwardRef((props, ref) => {
         handleCardRevealed(item.id);
         handleCardRemaining(user.team);
         console.log('Card Matched');
+        if (clueOption !== null && clueText) {
+          socket.emit('initialize-clue-name', {
+            roomId,
+            clueText,
+            clueOption,
+          });
+        }
       }
     } else {
       setClue(false);
@@ -176,8 +207,18 @@ const CardGrid = forwardRef((props, ref) => {
       handleCardRemaining(user.team);
 
       //TODO: write the code to change the turn to opposite team
-      handleActiveTeam({ team: user.team });
-      console.log('Card not matched');
+      // handleActiveTeam({ team: user.team });
+      // console.log('Card not matched 1');
+
+      socket.emit('update-team-turn', {
+        roomId,
+        team: activeTeam,
+      });
+      socket.emit('get-clue-word', {
+        roomId,
+      });
+
+      // console.log('Card not matched 2');
     }
   };
 
@@ -217,8 +258,9 @@ const CardGrid = forwardRef((props, ref) => {
   };
 
   useEffect(() => {
-    if (clue && clueText && clueOption) {
-      console.log(1);
+    // console.log(clue, clueText, clueOption);
+
+    if (clue && clueText && clueOption !== null) {
       socket.emit('initialize-clue-name', {
         roomId,
         clueText,
@@ -227,7 +269,6 @@ const CardGrid = forwardRef((props, ref) => {
     }
 
     if (!clue && !clueText && !clueOption) {
-      console.log(2);
       socket.emit('get-clue-word', {
         roomId,
       });
@@ -236,7 +277,12 @@ const CardGrid = forwardRef((props, ref) => {
     const handleInitialClueState = (data) => {
       console.log('server clue data', data);
 
-      if (data.clueText && data.clueOption) {
+      if (data.clueText === null && data.clueOption === null) {
+        setClue(false);
+        setShowClue(false);
+      }
+
+      if (data.clueText && data.clueOption !== null) {
         setClueText(data.clueText);
         setClueOption(data.clueOption);
         setShowClue(true);
@@ -442,41 +488,45 @@ const CardGrid = forwardRef((props, ref) => {
       </div>
 
       <div className="w-full pt-10 flex items-center justify-center ">
-        {user?.type === 'spymaster' && user?.team === activeTeam && !clue && (
-          <>
-            <input
-              className="bg-white outline-none px-3 mr-2 rounded-full w-auto py-2"
-              type="text"
-              placeholder="TYPE YOUR CLUE HERE"
-              value={clueText?.toUpperCase()}
-              onChange={(e) => setClueText(e.target.value)}
-            />
-            <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-              <DropdownMenuTrigger className="outline-none rounded-full">
-                <Button className="mr-2 bg-white text-black">
-                  {selectedOption ? selectedOption : '-'}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-full bg-[#222222] rounded-xl outline-none">
-                <div className="pt-3 mb-2 flex items-center justify-center">
-                  {options?.map((item) => (
-                    <Button
-                      key={item}
-                      onClick={() => handleOption(item)}
-                      size={'sm'}
-                      className="bg-white text-black rounded-full h-10 w-10 mr-1 ml-1"
-                    >
-                      {item}
-                    </Button>
-                  ))}
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button onClick={handleClue} className="bg-green-500">
-              Give Clue
-            </Button>
-          </>
-        )}
+        {user?.type === 'spymaster' &&
+          user.team === activeTeam &&
+          spymasterinlistornot &&
+          !clue && (
+            // user?.team === activeTeam &&
+            <>
+              <input
+                className="bg-white outline-none px-3 mr-2 rounded-full w-auto py-2"
+                type="text"
+                placeholder="TYPE YOUR CLUE HERE"
+                value={clueText?.toUpperCase()}
+                onChange={(e) => setClueText(e.target.value)}
+              />
+              <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+                <DropdownMenuTrigger className="outline-none rounded-full">
+                  <Button className="mr-2 bg-white text-black">
+                    {clueOption !== null ? clueOption : '-'}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-full bg-[#222222] rounded-xl outline-none">
+                  <div className="pt-3 mb-2 flex items-center justify-center">
+                    {options?.map((item) => (
+                      <Button
+                        key={item}
+                        onClick={() => handleOption(item)}
+                        size={'sm'}
+                        className="bg-white text-black rounded-full h-10 w-10 mr-1 ml-1"
+                      >
+                        {item}
+                      </Button>
+                    ))}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button onClick={handleClue} className="bg-green-500">
+                Give Clue
+              </Button>
+            </>
+          )}
         {showClue && (
           <div className="flex items-center">
             <Button>{clueText?.toUpperCase()}</Button>

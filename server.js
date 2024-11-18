@@ -21,6 +21,7 @@ app.prepare().then(() => {
   const roomStates = new Map();
   const wordListState = new Map();
   const clueState = new Map();
+  const teamTurnState = new Map();
 
   // Initialize room state if it doesn't exist
   const initializeRoomState = (roomId) => {
@@ -45,13 +46,22 @@ app.prepare().then(() => {
   };
 
   const updateClueState = (roomId, clueText = null, clueOption = null) => {
-    if (roomId && clueText && clueOption) {
+    // if (roomId && clueText && clueOption !== null) {
+    if (roomId) {
       clueState.set(roomId, {
         clueText: clueText,
         clueOption: clueOption,
       });
     }
+    // }
     return clueState.get(roomId);
+  };
+
+  const updateTeamTurn = (roomId, team) => {
+    if (roomId && team) {
+      teamTurnState.set(roomId, team === 'blue' ? 'red' : 'blue');
+    }
+    return teamTurnState.get(roomId);
   };
 
   io.on('connection', (socket) => {
@@ -152,7 +162,7 @@ app.prepare().then(() => {
         try {
           // await socket.join(roomId);
 
-          if (!roomId || !clueText || !clueOption) {
+          if (!roomId || !clueText || clueOption === null) {
             console.error('Missing required parameters:', {
               roomId,
               clueText,
@@ -162,7 +172,7 @@ app.prepare().then(() => {
           }
 
           const updatedClue = updateClueState(roomId, clueText, clueOption);
-          console.log('Updated clue state for room 1:', roomId, updatedClue);
+          // console.log('Updated clue state for room 1:', roomId, updatedClue);
 
           // Emit to all clients in the room including sender
           io.to(roomId).emit('initial-clue-word', {
@@ -177,12 +187,24 @@ app.prepare().then(() => {
 
     socket.on('get-clue-word', ({ roomId }) => {
       const updatedClue = updateClueState(roomId);
-      console.log('Updated clue state for room 2:', roomId, updatedClue);
+      // console.log('Updated clue state for room 2:', roomId, updatedClue);
 
       io.to(roomId).emit('initial-clue-word', {
         clueText: updatedClue?.clueText,
         clueOption: updatedClue?.clueOption,
       });
+    });
+
+    socket.on('update-team-turn', ({ roomId, team }) => {
+      if (roomId && team) {
+        console.log('update-team-turn is called in server', roomId, team);
+        const updatedTurn = updateTeamTurn(roomId, team);
+        console.log('Updated Team Turn', roomId, updatedTurn);
+
+        io.to(roomId).emit('updated-team-turn', {
+          team: updatedTurn,
+        });
+      }
     });
 
     socket.on('room-info', (data) => {

@@ -85,33 +85,7 @@ const RoomPage = ({ params }) => {
   const handleFetchWords = ({ roomId }) => {
     fetchWords(roomId)
       .then((roomData) => {
-        // let red = 0;
-        // let blue = 0;
-
-        // const initialWords = roomData.wordList;
-
-        // initialWords?.map((item) => {
-        //   if (item.cardType === 'red' && item.isRevealed !== true) {
-        //     red += 1;
-        //   }
-        //   if (item.cardType === 'blue' && item.isRevealed !== true) {
-        //     blue += 1;
-        //   }
-        // });
-
-        // setRedTeamCard(red);
-        // setBlueTeamCard(blue);
-
-        // if (red > blue) {
-        //   setActiveTeam('red');
-        // } else {
-        //   setActiveTeam('blue');
-        // }
-
         setActiveTeam(roomData.teamTurn);
-
-        // setWords(initialWords);
-        // console.log('roomData.isGameStarted', roomData.isGameStarted);
 
         if (roomData.isGameStarted === 'started') {
           setGameStarted(roomData.isGameStarted);
@@ -123,6 +97,37 @@ const RoomPage = ({ params }) => {
         console.error('Error fetching words:', error);
       });
   };
+
+  useEffect(() => {
+    const updateDBTeamTurn = async ({ team_ }) => {
+      console.log(team_);
+
+      await db
+        .update(RoomWordList)
+        .set({ teamTurn: team_ })
+        .where(eq(RoomWordList.roomId, roomId));
+
+      return { success: true, message: 'team updated successfully' };
+    };
+
+    const handleActiveTeamTurn = (team_) => {
+      console.log(
+        '🚀 ~ file: page.jsx:113 ~ handleActiveTeamTurn ~ team:',
+        team_
+      );
+
+      setActiveTeam(team_.team);
+      updateDBTeamTurn({ team_: team_.team });
+    };
+
+    if (activeTeam && socket) {
+      socket.on('updated-team-turn', handleActiveTeamTurn);
+    }
+
+    return () => {
+      // socket.off('updated-team-turn', handleActiveTeamTurn);
+    };
+  }, [activeTeam, socket]);
 
   const handleCardRemaining = (team) => {
     if (team === 'red') {
