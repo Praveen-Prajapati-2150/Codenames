@@ -1,23 +1,16 @@
 'use client';
 import { eq } from 'drizzle-orm';
-import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { db } from '../../configs/index';
-import { JsonForms, RoomWordList } from '../../configs/schema';
-import FormUi from '../../edit-form/_components/FormUi';
-import SetUpGame from '../../_components/SetUpGame';
-import TeamCard from '../../_components/TeamCard';
 import CardGrid from '../../_components/CardGrid';
 import Header from '../../_components/Header';
-import { useRouter } from 'next/navigation';
+import SetUpGame from '../../_components/SetUpGame';
+import TeamCard from '../../_components/TeamCard';
 import { generateRandomWords } from '../../_utils/generateWords';
-import io from 'socket.io-client';
-import { toast } from 'sonner';
-// import { socket } from '../../configs/socket';
-import React, { useMemo } from 'react';
-import fetchWords from '../../_utils/fetchWords';
+import { db } from '../../configs/index';
+import { RoomWordList } from '../../configs/schema';
+import React from 'react';
 import NickNameBox from '../../_components/NickNameBox';
+import fetchWords from '../../_utils/fetchWords';
 import { useSocket } from '../../context/SocketContext';
 
 const RoomPage = ({ params }) => {
