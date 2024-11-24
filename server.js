@@ -9,11 +9,15 @@ const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
+  console.log(dev);
+
   const httpServer = createServer(handler);
   // const io = new Server(httpServer);
   const io = new Server(httpServer, {
     cors: {
-      origin: 'http://localhost:3000',
+      origin: !dev
+        ? 'http://localhost:3000'
+        : 'https://indian-codenames.vercel.app/',
       methods: ['GET', 'POST'],
     },
   });
@@ -112,6 +116,17 @@ app.prepare().then(() => {
         // }
       } catch (error) {
         console.error('Error initialize word list:', error);
+      }
+    });
+
+    socket.emit('update-remaining-team-card', ({ roomId }) => {
+      try {
+        console.log('emit 1');
+        io.to(roomId).emit('updated-remaining-team-card', {
+          roomId,
+        });
+      } catch (error) {
+        console.error('Error update-remaining-team-card', error);
       }
     });
 

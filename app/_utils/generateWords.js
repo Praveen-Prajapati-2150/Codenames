@@ -9,7 +9,7 @@ export const CardType = {
   GREY: 'grey',
 };
 
-export const generateRandomWords = (count = 25, containerWidth = 134.05) => {
+export const generateRandomWords = ({count = 25, containerWidth = 134.05}) => {
   const shuffledWords = wordList.sort(() => 0.5 - Math.random());
   const randomWords = shuffledWords.slice(0, count);
 

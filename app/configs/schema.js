@@ -20,4 +20,6 @@ export const RoomWordList = pgTable('create_room', {
   createdBy: varchar('createdBy').notNull(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   teamTurn: text('teamTurn').notNull(),
+  blueCardRemaining: text('blueCardRemaining').notNull(),
+  redCardRemaining: text('redCardRemaining').notNull(),
 });

@@ -23,7 +23,7 @@ export default function TeamCard(props) {
   const [hideOperativeButton, setHideOperativeButton] = useState(false);
   const [hideSpyMasterButton, setHideSpyMasterButton] = useState(false);
 
-  // console.log({ activeTeam });
+  // console.log({ teamCardNumber });
 
   const handleButtonStatus = () => {
     let user = JSON.parse(localStorage.getItem('user'));

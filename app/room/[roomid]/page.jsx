@@ -6,7 +6,7 @@ import Header from '../../_components/Header';
 import SetUpGame from '../../_components/SetUpGame';
 import TeamCard from '../../_components/TeamCard';
 import { generateRandomWords } from '../../_utils/generateWords';
-import { db } from '../../configs/index';
+import { db } from '../../configs';
 import { RoomWordList } from '../../configs/schema';
 import React from 'react';
 import NickNameBox from '../../_components/NickNameBox';
@@ -75,10 +75,38 @@ const RoomPage = ({ params }) => {
     }
   };
 
+  // const handleFetchRemainingWords = ({roomId}) => {
+  //   fetchWords(roomId)
+  //     .then((roomData) => {
+  //       setActiveTeam(roomData.teamTurn);
+
+  //       setRedTeamCard(roomData.redCardRemaining);
+  //       setBlueTeamCard(roomData.blueCardRemaining);
+
+  //       // console.log('roomData', roomData);
+
+  //       if (roomData.isGameStarted === 'started') {
+  //         setGameStarted(roomData.isGameStarted);
+  //       } else {
+  //         setGameStarted(null);
+  //       }
+  //     })
+  //     .catch((error) => {
+  //       console.error('Error fetching words:', error);
+  //     });
+  // }
+
   const handleFetchWords = ({ roomId }) => {
     fetchWords(roomId)
       .then((roomData) => {
         setActiveTeam(roomData.teamTurn);
+
+        console.log('roomData.redCardRemaining', roomData.redCardRemaining);
+        console.log('roomData.blueCardRemaining', roomData.blueCardRemaining);
+        setRedTeamCard(roomData.redCardRemaining);
+        setBlueTeamCard(roomData.blueCardRemaining);
+
+        console.log('roomData', roomData);
 
         if (roomData.isGameStarted === 'started') {
           setGameStarted(roomData.isGameStarted);
@@ -104,11 +132,6 @@ const RoomPage = ({ params }) => {
     };
 
     const handleActiveTeamTurn = (team_) => {
-      console.log(
-        '🚀 ~ file: page.jsx:113 ~ handleActiveTeamTurn ~ team:',
-        team_
-      );
-
       setActiveTeam(team_.team);
       updateDBTeamTurn({ team_: team_.team });
     };
@@ -122,18 +145,62 @@ const RoomPage = ({ params }) => {
     };
   }, [activeTeam, socket]);
 
-  const handleCardRemaining = (team) => {
-    if (team === 'red') {
-      setRedTeamCard((prev) => prev - 1);
-    } else if (team === 'blue') {
-      setBlueTeamCard((prev) => prev - 1);
+  const updateDBTeamRemainingWord = async ({
+    teamName_,
+    remainingCard,
+    roomId,
+  }) => {
+    try {
+      console.log(typeof remainingCard);
+
+      const result = await db
+        .update(RoomWordList)
+        .set({ [teamName_]: remainingCard })
+        .where(eq(RoomWordList.roomId, roomId));
+
+      console.log(result);
+
+      return { success: true, message: 'Word revealed successfully' };
+    } catch (error) {
+      console.error('Error updating team remaining word:', error.message);
+      return { success: false, message: 'Failed to reveal word.' };
+    }
+  };
+
+  const handleCardRemaining = ({ userTeam, cardClicked }) => {
+    console.log(team, userTeam, cardClicked);
+
+    if (cardClicked !== 'grey' && cardClicked !== 'black') {
+      const teamKey =
+        userTeam === 'red' ? 'redCardRemaining' : 'blueCardRemaining';
+      const updateState = userTeam === 'red' ? setRedTeamCard : setBlueTeamCard;
+
+      updateState((prev) => {
+        const updatedCount = prev - 1;
+        updateDBTeamRemainingWord({
+          teamName_: teamKey,
+          remainingCard: updatedCount,
+          roomId,
+        });
+        socket.emit('update-remaining-team-card', { roomId });
+        return updatedCount;
+      });
     }
   };
 
   useEffect(() => {
     if (socket) {
+      socket.on('updated-remaining-team-card', ({ roomId }) => {
+        console.log('emit 2');
+        handleFetchWords({ roomId });
+      });
+    }
+  }, [socket, redTeamCard, blueTeamCard]);
+
+  useEffect(() => {
+    if (socket) {
       socket.on('connect', () => {
-        console.log('Socket connected:', socket.id);
+        // console.log('Socket connected:', socket.id);
       });
 
       socket.on('disconnect', () => {
@@ -331,13 +398,12 @@ const RoomPage = ({ params }) => {
           wordList: words,
           createdBy: nickName,
           teamTurn: blueCount === 9 ? 'blue' : 'red',
+          blueCardRemaining: blueCount,
+          redCardRemaining: blueCount === 8 ? 9 : 8,
         })
         .returning({ id: RoomWordList.id });
 
-      // console.log('createroom resp', resp);
-
       if (resp[0].id) {
-        // console.log({ gameStarted });
         setGameStarted(true);
       }
 
@@ -350,7 +416,9 @@ const RoomPage = ({ params }) => {
   };
 
   const handleStartGame = () => {
-    const words = generateRandomWords(25, 134.05);
+    const words = generateRandomWords({ count: 25, containerWidth: 134.05 });
+
+    console.log(words);
 
     if (words) {
       handleCreateRoom(words);
@@ -493,6 +561,7 @@ const RoomPage = ({ params }) => {
                   handleCardRemaining={handleCardRemaining}
                   redSpyMaster={redSpyMaster}
                   blueSpyMaster={blueSpyMaster}
+                  handleFetchWords={handleFetchWords}
                 />
               )}
             </div>

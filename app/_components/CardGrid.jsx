@@ -28,6 +28,7 @@ const CardGrid = forwardRef((props, ref) => {
     handleCardRemaining,
     redSpyMaster,
     blueSpyMaster,
+    handleFetchWords,
   } = props;
 
   const socket = useSocket();
@@ -63,7 +64,7 @@ const CardGrid = forwardRef((props, ref) => {
       if (result2) return result2;
     };
 
-    console.log(checkSpymasterInsideTheRoomOrNot());
+    // console.log(checkSpymasterInsideTheRoomOrNot());
 
     if (user?.nickName) {
       setSpymasterinlistornot(checkSpymasterInsideTheRoomOrNot());
@@ -162,7 +163,10 @@ const CardGrid = forwardRef((props, ref) => {
 
         //TODO: to update the card if the right card opens
         handleCardRevealed(item.id);
-        handleCardRemaining(user.team);
+        handleCardRemaining({
+          userTeam: user.team,
+          cardClicked: item.cardType,
+        });
 
         //TODO: write the code to change the turn to opposite team
         // handleActiveTeam({ team: user.team });
@@ -186,7 +190,10 @@ const CardGrid = forwardRef((props, ref) => {
 
         //TODO: to update the card if the right card opens
         handleCardRevealed(item.id);
-        handleCardRemaining(user.team);
+        handleCardRemaining({
+          userTeam: user.team,
+          cardClicked: item.cardType,
+        });
         console.log('Card Matched');
         if (clueOption !== null && clueText) {
           socket.emit('initialize-clue-name', {
@@ -204,7 +211,10 @@ const CardGrid = forwardRef((props, ref) => {
 
       //TODO: to update the card if the right card opens
       handleCardRevealed(item.id);
-      handleCardRemaining(user.team);
+      handleCardRemaining({
+        userTeam: user.team,
+        cardClicked: item.cardType,
+      });
 
       //TODO: write the code to change the turn to opposite team
       // handleActiveTeam({ team: user.team });
@@ -336,7 +346,9 @@ const CardGrid = forwardRef((props, ref) => {
     };
 
     const handleUpdateWordState = ({ wordList }) => {
+      console.log("function got called 1")
       setWords(wordList);
+      // handleFetchWords({ roomId });
       // console.log('update list', wordList);
     };
 
