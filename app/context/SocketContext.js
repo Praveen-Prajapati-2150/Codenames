@@ -17,8 +17,8 @@ export const SocketProvider = (props) => {
 
   const URL =
     process.env.NODE_ENV === 'production'
-      ? NEXT_PUBLIC_PROD_SERVER_URL
-      : NEXT_PUBLIC_DEV_SERVER_URL;
+      ? process.env.NEXT_PUBLIC_PROD_SERVER_URL
+      : process.env.NEXT_PUBLIC_DEV_SERVER_URL;
 
   // console.log('URL', URL);
 

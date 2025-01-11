@@ -4,7 +4,7 @@ import { RoomWordList } from '../configs/schema';
 import { eq } from 'drizzle-orm';
 
 const fetchWords = async (roomId) => {
-
+    
   try {
     const result = await db
       .select()

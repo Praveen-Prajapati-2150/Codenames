@@ -12,6 +12,7 @@ import React from 'react';
 import NickNameBox from '../../_components/NickNameBox';
 import fetchWords from '../../_utils/fetchWords';
 import { useSocket } from '../../context/SocketContext';
+import handleCreateRoom from '../../_utils/handleCreateRoom';
 
 const RoomPage = ({ params }) => {
   const { roomid: roomId } = params;
@@ -44,7 +45,7 @@ const RoomPage = ({ params }) => {
   const [team, setTeam] = useState(null);
   const [role, setRole] = useState(null);
   const [activeTeam, setActiveTeam] = useState(null);
-
+  
   useEffect(() => {
     const name = JSON.parse(localStorage.getItem('nickName'));
     if (!name) {
@@ -172,22 +173,6 @@ const RoomPage = ({ params }) => {
     }
   }, [socket]);
 
-  // Set up socket event listeners ONCE
-  useEffect(() => {
-    if (socket) {
-      const handleAdd = () => setCounter((prev) => prev + 1);
-      const handleMinus = () => setCounter((prev) => prev - 1);
-
-      socket.on('add', handleAdd);
-      socket.on('minus', handleMinus);
-
-      return () => {
-        socket.off('add', handleAdd);
-        socket.off('minus', handleMinus);
-      };
-    }
-  }, [socket]);
-
   useEffect(() => {
     if (!socket || !roomId || !nickName) return;
 
@@ -291,8 +276,6 @@ const RoomPage = ({ params }) => {
   }, [roomId, nickName]);
 
   const handleClick = (type) => {
-    // console.log('socket', socket);
-
     if (socket && socket.connected) {
       if (type === 'add') {
         socket.emit('add', 1);
@@ -330,39 +313,20 @@ const RoomPage = ({ params }) => {
     }
   };
 
-  const handleCreateRoom = async ({ words, blueCount }) => {
-    setLoading(true);
-
-    try {
-      const resp = await db
-        .insert(RoomWordList)
-        .values({
-          uniqueId: roomId,
-          isGameStarted: 'started',
-          roomId: roomId,
-          wordList: words,
-          createdBy: nickName,
-          teamTurn: blueCount === 9 ? 'blue' : 'red',
-          blueCardRemaining: blueCount,
-          redCardRemaining: blueCount === 8 ? 9 : 8,
-        })
-        .returning({ id: RoomWordList.id });
-
-      if (resp[0].id) {
-        setGameStarted(true);
-      }
-    } catch (error) {
-      console.error('Error creating room:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStartGame = () => {
+  const handleStartGame = async () => {
     const words = generateRandomWords({ count: 25, containerWidth: 134.05 });
 
     if (words) {
-      handleCreateRoom(words);
+      let resp = await handleCreateRoom({
+        RoomWordList,
+        roomId,
+        words: words.words,
+        nickName,
+        blueCount: words.blueCount,
+      });
+      if (resp) {
+        setGameStarted(true);
+      }
     }
   };
 

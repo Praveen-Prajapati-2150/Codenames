@@ -346,7 +346,7 @@ const CardGrid = forwardRef((props, ref) => {
     };
 
     const handleUpdateWordState = ({ wordList }) => {
-      console.log("function got called 1")
+      console.log('function got called 1');
       setWords(wordList);
       // handleFetchWords({ roomId });
       // console.log('update list', wordList);
@@ -360,6 +360,8 @@ const CardGrid = forwardRef((props, ref) => {
       socket.off('update-word-list', handleUpdateWordState);
     };
   }, [socket, roomId, nickName]);
+
+  console.log(words);
 
   return (
     <div className="h-[550px] w-full bg-slate-900 px-10 flex flex-col items-start justify-start">
