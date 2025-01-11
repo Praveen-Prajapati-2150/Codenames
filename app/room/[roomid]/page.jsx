@@ -46,16 +46,6 @@ const RoomPage = ({ params }) => {
   const [activeTeam, setActiveTeam] = useState(null);
 
   useEffect(() => {
-    // const name = JSON.parse(localStorage.getItem('nickName'));
-    // let user = {
-    //   nickName: name,
-    //   team: null,
-    //   type: null,
-    // };
-    // window.localStorage.setItem('user', JSON.stringify(user));
-  }, [roomId]);
-
-  useEffect(() => {
     const name = JSON.parse(localStorage.getItem('nickName'));
     if (!name) {
       let user = {
@@ -75,38 +65,13 @@ const RoomPage = ({ params }) => {
     }
   };
 
-  // const handleFetchRemainingWords = ({roomId}) => {
-  //   fetchWords(roomId)
-  //     .then((roomData) => {
-  //       setActiveTeam(roomData.teamTurn);
-
-  //       setRedTeamCard(roomData.redCardRemaining);
-  //       setBlueTeamCard(roomData.blueCardRemaining);
-
-  //       // console.log('roomData', roomData);
-
-  //       if (roomData.isGameStarted === 'started') {
-  //         setGameStarted(roomData.isGameStarted);
-  //       } else {
-  //         setGameStarted(null);
-  //       }
-  //     })
-  //     .catch((error) => {
-  //       console.error('Error fetching words:', error);
-  //     });
-  // }
-
   const handleFetchWords = ({ roomId }) => {
     fetchWords(roomId)
       .then((roomData) => {
         setActiveTeam(roomData.teamTurn);
 
-        console.log('roomData.redCardRemaining', roomData.redCardRemaining);
-        console.log('roomData.blueCardRemaining', roomData.blueCardRemaining);
         setRedTeamCard(roomData.redCardRemaining);
         setBlueTeamCard(roomData.blueCardRemaining);
-
-        console.log('roomData', roomData);
 
         if (roomData.isGameStarted === 'started') {
           setGameStarted(roomData.isGameStarted);
@@ -151,14 +116,10 @@ const RoomPage = ({ params }) => {
     roomId,
   }) => {
     try {
-      console.log(typeof remainingCard);
-
       const result = await db
         .update(RoomWordList)
         .set({ [teamName_]: remainingCard })
         .where(eq(RoomWordList.roomId, roomId));
-
-      console.log(result);
 
       return { success: true, message: 'Word revealed successfully' };
     } catch (error) {
@@ -168,8 +129,6 @@ const RoomPage = ({ params }) => {
   };
 
   const handleCardRemaining = ({ userTeam, cardClicked }) => {
-    console.log(team, userTeam, cardClicked);
-
     if (cardClicked !== 'grey' && cardClicked !== 'black') {
       const teamKey =
         userTeam === 'red' ? 'redCardRemaining' : 'blueCardRemaining';
@@ -232,11 +191,8 @@ const RoomPage = ({ params }) => {
   useEffect(() => {
     if (!socket || !roomId || !nickName) return;
 
-    // Join socket room on component mount
-    // console.log(roomId, nickName);
     socket.emit('join-socket-room', { roomId, nickName });
 
-    // Listen for initial room state
     const handleInitialState = ({
       redTeam,
       redSpyMaster,
@@ -244,13 +200,6 @@ const RoomPage = ({ params }) => {
       blueSpyMaster,
       connectedUsers,
     }) => {
-      // console.log('Received initial state:', {
-      //   redTeam,
-      //   redSpyMaster,
-      //   blueTeam,
-      //   blueSpyMaster,
-      //   connectedUsers,
-      // });
       setRedTeam(redTeam);
       setRedSpyMaster(redSpyMaster);
       setBlueTeam(blueTeam);
@@ -258,8 +207,6 @@ const RoomPage = ({ params }) => {
     };
 
     const handleNewUser = ({ userId, team, type, nickName }) => {
-      // console.log('New user event received:', { userId, team, type, nickName });
-
       // Don't update if it's the current user
       if (userId === socket.id) {
         console.log('Ignoring new-user event for current user');
@@ -386,8 +333,6 @@ const RoomPage = ({ params }) => {
   const handleCreateRoom = async ({ words, blueCount }) => {
     setLoading(true);
 
-    // console.log('words', words);
-
     try {
       const resp = await db
         .insert(RoomWordList)
@@ -406,8 +351,6 @@ const RoomPage = ({ params }) => {
       if (resp[0].id) {
         setGameStarted(true);
       }
-
-      // console.log('Room created with ID:', resp[0].id);
     } catch (error) {
       console.error('Error creating room:', error);
     } finally {
@@ -417,8 +360,6 @@ const RoomPage = ({ params }) => {
 
   const handleStartGame = () => {
     const words = generateRandomWords({ count: 25, containerWidth: 134.05 });
-
-    console.log(words);
 
     if (words) {
       handleCreateRoom(words);
@@ -448,13 +389,10 @@ const RoomPage = ({ params }) => {
   };
 
   const handleOperativeMain = ({ team, type }) => {
-    // console.log(team, type);
-
     updateUserStatus(team, type);
     RemoveFromOtherTeams({ team, type });
     setUser(JSON.parse(localStorage.getItem('user')));
 
-    // console.log(socket, socket.connected, roomId, team, type, nickName);
     if (socket && socket.connected && roomId && team && type && nickName) {
       try {
         socket.emit('join-room', { roomId, team, type, nickName });
@@ -480,18 +418,9 @@ const RoomPage = ({ params }) => {
     }
   };
 
-  const checkSpymasterInsideTheRoomOrNot = (user) => {
-    // let result;
-    // result = redSpyMaster?.find((item) => item === user.nickName);
-    // result = blueSpyMaster?.find((item) => item === user.nickName);
-    // console.log({ result });
-  };
-
   return (
     <div className="flex flex-col items-start justify-between w-full h-[100vh] ">
       {!nickName ? (
-        // <h1>enter your nickname</h1>
-
         <div className="w-screen flex items-center justify-center">
           <NickNameBox
             roomId={roomId}
@@ -519,31 +448,11 @@ const RoomPage = ({ params }) => {
                 handleOperative={handleOperative}
                 nickName={nickName}
                 gameStarted={gameStarted}
-                // redTeamCard={redTeamCard}
-                // blueTeamCard={blueTeamCard}
                 activeTeam={activeTeam}
                 teamCardNumber={redTeamCard}
                 handleCardRemaining={handleCardRemaining}
               />
             </div>
-
-            {/* <div className="h-screen flex justify-center items-center flex-col">
-              <h1 className="text-5xl font-bold">{counter}</h1>
-              <div className="flex space-x-4 items-center mt-10">
-                <button
-                  className="py-2 px-6  rounded-md bg-green-400 text-white"
-                  onClick={() => handleClick('add')}
-                >
-                  Add
-                </button>
-                <button
-                  className="py-2 px-6 rounded-md bg-red-400 text-white"
-                  onClick={() => handleClick('minus')}
-                >
-                  Minus
-                </button>
-              </div>
-            </div> */}
 
             <div>
               {!gameStarted ? (
@@ -579,8 +488,6 @@ const RoomPage = ({ params }) => {
                 handleOperative={handleOperative}
                 nickName={nickName}
                 gameStarted={gameStarted}
-                // redTeamCard={redTeamCard}
-                // blueTeamCard={blueTeamCard}
                 activeTeam={activeTeam}
                 teamCardNumber={blueTeamCard}
                 handleCardRemaining={handleCardRemaining}

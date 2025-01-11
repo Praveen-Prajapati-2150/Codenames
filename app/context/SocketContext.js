@@ -15,28 +15,43 @@ export const SocketProvider = (props) => {
   const { children } = props;
   const [socket, setSocket] = useState(null);
 
+  const URL =
+    process.env.NODE_ENV === 'production'
+      ? 'https://codenames-server-bnuk.onrender.com'
+      : 'http://localhost:5000';
+
+  console.log('URL', URL);
+
   useEffect(() => {
-    const connection = io();
-    // console.log('Socket Connection', connection);
+    const connection = io(URL, {
+      // reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      timeout: 20000,
+      // transports: ['websocket'],
+      transports: ['websocket', 'polling'],
+      upgrade: true, // Allow transport upgrade
+      forceNew: true, // Force a new connection
+    });
+
+    connection.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+    
+    connection.on('connect', () => {
+      console.log('Socket connected successfully');
+    });
+
+    connection.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+
     setSocket(connection);
 
     return () => {
       connection.disconnect();
     };
-  }, []);
-
-  useEffect(() => {
-    // console.log('socket', socket);
-  }, [socket]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on('connect_error', async (err) => {
-        console.log('Error establishing socket', err);
-        await fetch('/api/socket');
-      });
-    }
-  }, [socket]);
+  }, [URL]);
 
   return (
     <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
